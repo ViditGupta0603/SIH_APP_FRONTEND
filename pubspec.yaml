@@ -38,6 +38,7 @@ dependencies:
   fl_chart: ^0.63.0
   http: ^1.5.0
   csv: ^6.0.0
+  interactive_country_map: ^0.0.6
 
 dev_dependencies:
   flutter_test:

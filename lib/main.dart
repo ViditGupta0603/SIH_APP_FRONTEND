@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:interactive_country_map/interactive_country_map.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 void main() {
   runApp(const DWLRMapApp());
@@ -12,7 +13,10 @@ class DWLRMapApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'India Water Levels',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.blue,
+      ),
       home: const WaterLevelMapPage(),
     );
   }
@@ -26,46 +30,138 @@ class WaterLevelMapPage extends StatefulWidget {
 }
 
 class _WaterLevelMapPageState extends State<WaterLevelMapPage> {
-  /// Mock state-level water levels keyed by ISO-3166-2 codes for India.
-  /// Replace these with real DWLR values (make sure to use the ISO codes).
   final Map<String, double> waterLevels = {
-    'IN-RJ': 15.2, // Rajasthan
-    'IN-MH': 32.1, // Maharashtra
-    'IN-UP': 22.5, // Uttar Pradesh
-    'IN-TN': 28.4, // Tamil Nadu
-    'IN-PB': 18.9, // Punjab
-    'IN-GJ': 30.3, // Gujarat
-    'IN-KL': 40.5, // Kerala
+    'IN-AP': 28.5, 'IN-AR': 35.2, 'IN-AS': 25.7, 'IN-BR': 18.3,
+    'IN-CT': 22.6, 'IN-GA': 30.1, 'IN-GJ': 29.9, 'IN-HR': 20.8,
+    'IN-HP': 26.3, 'IN-JK': 32.1, 'IN-JH': 24.5, 'IN-KA': 27.8,
+    'IN-KL': 40.5, 'IN-MP': 21.4, 'IN-MH': 33.2, 'IN-MN': 36.0,
+    'IN-ML': 28.1, 'IN-MZ': 34.6, 'IN-NL': 29.5, 'IN-OR': 23.3,
+    'IN-PB': 18.9, 'IN-RJ': 15.2, 'IN-SK': 31.7, 'IN-TN': 28.4,
+    'IN-TG': 26.2, 'IN-TR': 27.0, 'IN-UP': 22.5, 'IN-UT': 25.0,
+    'IN-WB': 24.9, 'IN-AN': 37.0, 'IN-CH': 29.0, 'IN-DN': 27.5,
+    'IN-DD': 30.2, 'IN-DL': 21.8, 'IN-LD': 33.5, 'IN-LK': 26.7,
+    'IN-PY': 28.8,
   };
 
-  /// Optional: friendly names for display (map ISO code -> state name)
   final Map<String, String> isoToName = {
-    'IN-RJ': 'Rajasthan',
-    'IN-MH': 'Maharashtra',
-    'IN-UP': 'Uttar Pradesh',
-    'IN-TN': 'Tamil Nadu',
-    'IN-PB': 'Punjab',
-    'IN-GJ': 'Gujarat',
-    'IN-KL': 'Kerala',
+    'IN-AP': 'Andhra Pradesh', 'IN-AR': 'Arunachal Pradesh', 'IN-AS': 'Assam',
+    'IN-BR': 'Bihar', 'IN-CT': 'Chhattisgarh', 'IN-GA': 'Goa',
+    'IN-GJ': 'Gujarat', 'IN-HR': 'Haryana', 'IN-HP': 'Himachal Pradesh',
+    'IN-JK': 'Jammu & Kashmir', 'IN-JH': 'Jharkhand', 'IN-KA': 'Karnataka',
+    'IN-KL': 'Kerala', 'IN-MP': 'Madhya Pradesh', 'IN-MH': 'Maharashtra',
+    'IN-MN': 'Manipur', 'IN-ML': 'Meghalaya', 'IN-MZ': 'Mizoram',
+    'IN-NL': 'Nagaland', 'IN-OR': 'Odisha', 'IN-PB': 'Punjab',
+    'IN-RJ': 'Rajasthan', 'IN-SK': 'Sikkim', 'IN-TN': 'Tamil Nadu',
+    'IN-TG': 'Telangana', 'IN-TR': 'Tripura', 'IN-UP': 'Uttar Pradesh',
+    'IN-UT': 'Uttarakhand', 'IN-WB': 'West Bengal',
+    'IN-AN': 'Andaman & Nicobar Islands', 'IN-CH': 'Chandigarh',
+    'IN-DN': 'Dadra & Nagar Haveli', 'IN-DD': 'Daman & Diu',
+    'IN-DL': 'Delhi', 'IN-LD': 'Lakshadweep', 'IN-LK': 'Ladakh',
+    'IN-PY': 'Puducherry',
   };
 
   String? selectedCode;
 
-  /// Convert water level value -> color
   Color colorFor(double? level) {
-    if (level == null) return Colors.grey.shade300;
+    if (level == null) return Colors.grey.shade200;
     if (level < 20.0) return Colors.red.shade400;
     if (level < 30.0) return Colors.orange.shade400;
-    return Colors.green.shade400;
+    return Colors.green.shade500;
   }
 
-  /// Build the mappingCode map required by InteractiveMapTheme
   Map<String, Color> buildMapping() {
-    final Map<String, Color> map = {};
-    for (final entry in waterLevels.entries) {
-      map[entry.key] = colorFor(entry.value);
-    }
-    return map;
+    return waterLevels.map((key, value) => MapEntry(key, colorFor(value)));
+  }
+
+  void _showStateBottomSheet(BuildContext context, String code) {
+    final name = isoToName[code] ?? code;
+    final level = waterLevels[code] ?? 0;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.water_drop, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        Text("Level: ${level.toStringAsFixed(2)} m",
+                            style: const TextStyle(fontSize: 16)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: const [
+                        Icon(Icons.trending_up, color: Colors.green),
+                        SizedBox(width: 8),
+                        Text("Recharge Pattern: Stable",
+                            style: TextStyle(fontSize: 14)),
+                      ],
+                    ),
+                    Row(
+                      children: const [
+                        Icon(Icons.eco, color: Colors.teal),
+                        SizedBox(width: 8),
+                        Text("Availability: Moderate",
+                            style: TextStyle(fontSize: 14)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Right side button
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.show_chart),
+                label: const Text("Trends"),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WaterTrendPage(
+                        stateCode: code,
+                        stateName: name,
+                        level: level,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -73,101 +169,116 @@ class _WaterLevelMapPageState extends State<WaterLevelMapPage> {
     final mapping = buildMapping();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('India — State Water Levels')),
-      body: Column(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: InteractiveMap(
-                // first (positional) argument is the map entity to load
-                MapEntity.india,
-                // theme controls colors per ISO code
-                theme: InteractiveMapTheme(
-                  backgroundColor: Colors.blueGrey.shade50,
-                  mappingCode: mapping,
-                ),
-                // called when a region (state/UT) is tapped; returns ISO code like 'IN-MH'
-                onCountrySelected: (code) {
-                  setState(() => selectedCode = code);
-                },
-                // optional: initial selected code (if you want)
-                selectedCode: selectedCode,
-                // optional: min/max scale, markers etc.
-                minScale: 0.7,
-                maxScale: 6.0,
-              ),
-            ),
-          ),
-
-          // Selected state info
-          Container(
-            width: double.infinity,
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            child: selectedCode == null
-                ? const Text('Tap a state to see water-level details',
-                    style: TextStyle(fontSize: 16))
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isoToName[selectedCode] ?? selectedCode!,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Water level: ${waterLevels[selectedCode]?.toStringAsFixed(2) ?? "No data"} m',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                              width: 18,
-                              height: 18,
-                              color: colorFor(waterLevels[selectedCode])),
-                          const SizedBox(width: 8),
-                          Text(_recommendation(waterLevels[selectedCode])),
-                        ],
-                      ),
-                    ],
-                  ),
-          ),
-
-          // Legend
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _legendItem(Colors.red.shade400, 'Low (<20 m)'),
-                _legendItem(Colors.orange.shade400, 'Medium (20–30 m)'),
-                _legendItem(Colors.green.shade400, 'High (≥30 m)'),
-              ],
-            ),
-          ),
-        ],
+      appBar: AppBar(
+        title: const Text('India — State Water Levels'),
+        backgroundColor: Colors.blue.shade600,
+        foregroundColor: Colors.white,
+        elevation: 1,
+      ),
+      body: InteractiveMap(
+        MapEntity.india,
+        theme: InteractiveMapTheme(
+          backgroundColor: Colors.blueGrey.shade50,
+          borderColor: Colors.grey.shade400,
+          borderWidth: 0.8, // thinner borders
+          mappingCode: mapping,
+        ),
+        onCountrySelected: (code) {
+          setState(() => selectedCode = code);
+          if (code != null && waterLevels.containsKey(code)) {
+            _showStateBottomSheet(context, code);
+          }
+        },
+        selectedCode: selectedCode,
       ),
     );
   }
+}
 
-  Widget _legendItem(Color color, String label) {
-    return Row(
-      children: [
-        Container(width: 18, height: 18, color: color),
-        const SizedBox(width: 8),
-        Text(label),
-      ],
-    );
+class WaterTrendPage extends StatelessWidget {
+  final String stateCode;
+  final String stateName;
+  final double level;
+
+  const WaterTrendPage({
+    super.key,
+    required this.stateCode,
+    required this.stateName,
+    required this.level,
+  });
+
+  List<FlSpot> get trendData {
+    return List.generate(12, (i) {
+      final month = i.toDouble();
+      final value = level + (i % 2 == 0 ? -2 : 3);
+      return FlSpot(month, value);
+    });
   }
 
-  String _recommendation(double? level) {
-    if (level == null) return 'No recommendation — missing data';
-    if (level < 20) return 'Recommendation: immediate recharge measures.';
-    if (level < 30) return 'Recommendation: monitor & target recharge projects.';
-    return 'Recommendation: groundwater stable — continue monitoring.';
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('$stateName Trends'),
+        backgroundColor: Colors.blue.shade600,
+        foregroundColor: Colors.white,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            Text(
+              'Groundwater Trend for $stateName',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: LineChart(
+                LineChartData(
+                  gridData: const FlGridData(show: true),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, _) {
+                          return Text('M${value.toInt() + 1}');
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: true),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: trendData,
+                      isCurved: true,
+                      barWidth: 3,
+                      color: Colors.blue,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: Colors.blue.withOpacity(0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Current Level: ${level.toStringAsFixed(2)} m',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
